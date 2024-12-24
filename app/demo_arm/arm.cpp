@@ -61,61 +61,44 @@ void Arm::ikine(Pose &ref_pose, Joint &ref_joint) {
   if(ref_pose.y<0.01&&ref_pose.y>-0.01) control_y=0.01;
   if(ref_pose.z<0.01&&ref_pose.z>-0.01) control_z=0.01;
 
-  ref_joint.q[0] = atan2(control_y, control_x);
-  ref_joint.q[1] =3.1415926-atan2(control_z, sqrt(control_x*control_x+control_y*control_y))
-       - acos((-l2*l2+l1*l1+control_x*control_x+control_y*control_y+control_z*control_z)
-           /(2*l1*sqrt(control_x*control_x+control_y*control_y+control_z*control_z)));
+    //theta 1
+    //theta 1 has 2 solutions, on choisit la solution la plus proche(we choose the closer solution)
+    float theta11 = atan2(control_y,control_x) - atan2(l1/sqrt(control_x*control_x + control_y*control_y), +sqrt(1-pow((l1/sqrt(control_x*control_x + control_y*control_y)),2)));
+    float theta12 = atan2(control_y,control_x) - atan2(l1/sqrt(control_x*control_x + control_y*control_y), -sqrt(1-pow((l1/sqrt(control_x*control_x + control_y*control_y)),2)));
+    if (abs(theta11-ref_joint.q[0]) < abs(theta12-ref_joint.q[0])) {
+        ref_joint.q[0] = theta11;
+    }
+    else {
+        ref_joint.q[0] = theta12;
+    }
 
-  ref_joint.q[2] =
-      acos((-control_x*control_x-control_y*control_y-control_z*control_z+l1*l1+l2*l2)/(2*l1*l2));
+    //theta 3
+    //theta 3 has 2 solutions, on choisit la solution la plus proche(we choose the closer solution)
+    float sin3 = -(pow((control_x*cos(ref_joint.q[0]) + control_y*sin(ref_joint.q[0])),2) - l2*l2 - l3*l3 + control_z*control_z)/(2*l2*l3);
+    float theta31 = atan2(sin3, +sqrt(1-sin3*sin3));
+    float theta32 = atan2(sin3, -sqrt(1-sin3*sin3));
+    if (abs(theta31-ref_joint.q[2]) < abs(theta32-ref_joint.q[2])) {
+        ref_joint.q[2] = theta31;
+    }
+    else {
+        ref_joint.q[2] = theta32;
+    }
 
-  //theta 1-3 and pose to theta 4-6
-  Posture_matrix T60;//from in 6 to in 0
-  T60.a11=cos(ref_pose.yaw)*cos(ref_pose.pitch);
-  T60.a12=cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)-sin(ref_pose.yaw)*cos(ref_pose.roll);
-  T60.a13=cos(ref_pose.yaw)*sin(ref_pose.pitch)*cos(ref_pose.roll)+sin(ref_pose.yaw)*sin(ref_pose.roll);
-  T60.a21=sin(ref_pose.yaw)*cos(ref_pose.pitch);
-  T60.a22=sin(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)+cos(ref_pose.yaw)*cos(ref_pose.roll);
-  T60.a23=sin(ref_pose.yaw)*sin(ref_pose.pitch)*cos(ref_pose.roll)-cos(ref_pose.yaw)*sin(ref_pose.roll);
-  T60.a31=-sin(ref_pose.pitch);
-  T60.a32=cos(ref_pose.pitch)*sin(ref_pose.roll);
-  T60.a33=cos(ref_pose.pitch)*cos(ref_pose.roll);
+    //theta 2
+    float theta23 = atan2((l2*cos(ref_joint.q[2])+(cos(ref_joint.q[0])*control_x+sin(ref_joint.q[0])*control_y)*(l3-l2*cos(ref_joint.q[2]))),
+    (l3-l2*cos(ref_joint.q[2]))*control_z + l2*cos(ref_joint.q[2])*(cos(ref_joint.q[0])*control_x+sin(ref_joint.q[0])*control_y));
+    ref_joint.q[1] = theta23 - ref_joint.q[2];
 
+    //theta 4
+    ref_joint.q[3] = atan2(sin(ref_pose.pitch)*sin(ref_joint.q[0]) + cos(ref_pose.pitch)*cos(ref_joint.q[0])*sin(ref_pose.roll),
+        cos(ref_pose.pitch)*cos(ref_pose.roll)*cos(ref_joint.q[1])*sin(ref_joint.q[2]) + cos(ref_pose.pitch)*cos(ref_pose.roll)*cos(ref_joint.q[2])*sin(ref_joint.q[1]) + cos(ref_joint.q[0])*cos(ref_joint.q[1])*cos(ref_joint.q[1])*sin(ref_pose.pitch) - cos(ref_joint.q[0])*sin(ref_pose.pitch)*sin(ref_joint.q[1])*sin(ref_joint.q[2]) - cos(ref_pose.pitch)*cos(ref_joint.q[1])*cos(ref_joint.q[2])*sin(ref_pose.roll)*sin(ref_joint.q[0]) + cos(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2]));
 
+    //theta 5
+    ref_joint.q[4] = atan2(sin(ref_pose.pitch)*sin(ref_joint.q[0])*sin(ref_joint.q[3]) + cos(ref_pose.pitch)*cos(ref_joint.q[0])*sin(ref_pose.roll)*sin(ref_joint.q[3]) + cos(ref_pose.pitch)*cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[3])*sin(ref_joint.q[2]) + cos(ref_pose.pitch)*cos(ref_pose.roll)*cos(ref_joint.q[2])*cos(ref_joint.q[3])*sin(ref_joint.q[1]) + cos(ref_joint.q[0])*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_joint.q[3])*sin(ref_pose.pitch) - cos(ref_joint.q[0])*cos(ref_joint.q[3])*sin(ref_pose.pitch)*sin(ref_joint.q[1])*sin(ref_joint.q[2]) - cos(ref_pose.pitch)*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_joint.q[3])*sin(ref_pose.roll)*sin(ref_joint.q[0]) + cos(ref_pose.pitch)*cos(ref_joint.q[3])*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2]), cos(ref_pose.pitch)*cos(ref_pose.roll)*sin(ref_joint.q[1])*sin(ref_joint.q[2]) - cos(ref_pose.pitch)*cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[2]) + cos(ref_joint.q[0])*cos(ref_joint.q[1])*sin(ref_pose.pitch)*sin(ref_joint.q[2]) + cos(ref_joint.q[0])*cos(ref_joint.q[2])*sin(ref_pose.pitch)*sin(ref_joint.q[1]) - cos(ref_pose.pitch)*cos(ref_joint.q[1])*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[2]) - cos(ref_pose.pitch)*cos(ref_joint.q[2])*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1]));
 
+    //theta 6
+    ref_joint.q[5] = atan2(cos(ref_pose.pitch)*cos(ref_joint.q[3])*cos(ref_pose.yaw)*sin(ref_joint.q[0]) - cos(ref_pose.roll)*cos(ref_joint.q[0])*cos(ref_joint.q[3])*sin(ref_pose.yaw) - cos(ref_joint.q[0])*cos(ref_joint.q[3])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll) - cos(ref_joint.q[1])*sin(ref_pose.roll)*sin(ref_joint.q[2])*sin(ref_joint.q[3])*sin(ref_pose.yaw) - cos(ref_joint.q[2])*sin(ref_pose.roll)*sin(ref_joint.q[1])*sin(ref_joint.q[3])*sin(ref_pose.yaw) - cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_joint.q[3]) + cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[2])*sin(ref_joint.q[3]) + cos(ref_pose.roll)*cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[1])*sin(ref_joint.q[3]) + cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_pose.yaw)*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_joint.q[3]) - cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[2])*sin(ref_joint.q[0])*sin(ref_joint.q[3])*sin(ref_pose.yaw) + cos(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_joint.q[3])*sin(ref_pose.yaw) - cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[3]) + cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_joint.q[3]), cos(ref_pose.pitch)*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_joint.q[0])*sin(ref_joint.q[3]) - cos(ref_pose.roll)*cos(ref_joint.q[0])*cos(ref_joint.q[4])*sin(ref_joint.q[3])*sin(ref_pose.yaw) + cos(ref_joint.q[1])*cos(ref_joint.q[2])*sin(ref_pose.roll)*sin(ref_joint.q[4])*sin(ref_pose.yaw) - sin(ref_pose.roll)*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_joint.q[4])*sin(ref_pose.yaw) - cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[4]) - cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_joint.q[1])*cos(ref_pose.yaw)*sin(ref_joint.q[2])*sin(ref_joint.q[4]) - cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_joint.q[1])*sin(ref_joint.q[4]) - cos(ref_joint.q[0])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[3]) + cos(ref_joint.q[1])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*sin(ref_pose.roll)*sin(ref_joint.q[2])*sin(ref_pose.yaw) + cos(ref_joint.q[2])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*sin(ref_pose.roll)*sin(ref_joint.q[1])*sin(ref_pose.yaw) + cos(ref_pose.roll)*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_joint.q[4]) - cos(ref_pose.roll)*cos(ref_joint.q[1])*sin(ref_joint.q[0])*sin(ref_joint.q[2])*sin(ref_joint.q[4])*sin(ref_pose.yaw) - cos(ref_pose.roll)*cos(ref_joint.q[2])*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[4])*sin(ref_pose.yaw) + cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw) - cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[2]) - cos(ref_pose.roll)*cos(ref_joint.q[2])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_joint.q[1]) - cos(ref_pose.pitch)*cos(ref_joint.q[0])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_joint.q[1])*sin(ref_joint.q[2]) + cos(ref_pose.roll)*cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*sin(ref_joint.q[0])*sin(ref_pose.yaw) - cos(ref_pose.roll)*cos(ref_joint.q[3])*cos(ref_joint.q[4])*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2])*sin(ref_pose.yaw) - cos(ref_joint.q[1])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[2])*sin(ref_joint.q[4]) - cos(ref_joint.q[2])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[4]) + cos(ref_joint.q[1])*cos(ref_joint.q[2])*cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0]) - cos(ref_joint.q[3])*cos(ref_joint.q[4])*cos(ref_pose.yaw)*sin(ref_pose.pitch)*sin(ref_pose.roll)*sin(ref_joint.q[0])*sin(ref_joint.q[1])*sin(ref_joint.q[2]));
 
-  Posture_matrix T31;
-  T31.a11=cos(ref_joint.q[2]-ref_joint.q[1]);
-  T31.a12=-sin(ref_joint.q[2]-ref_joint.q[1]);
-  T31.a13=0;
-  T31.a21=sin(ref_joint.q[2]-ref_joint.q[1]);
-  T31.a22=cos(ref_joint.q[2]-ref_joint.q[1]);
-  T31.a23=0;
-  T31.a31=0;
-  T31.a32=0;
-  T31.a33=1;
-
-  Posture_matrix T10;
-  T10.a11=cos(ref_joint.q[0]);
-  T10.a12=0;
-  T10.a13=sin(ref_joint.q[0]);
-  T10.a21=0;
-  T10.a22=1;
-  T10.a23=0;
-  T10.a31=-sin(ref_joint.q[0]);
-  T10.a32=0;
-  T10.a33=cos(ref_joint.q[0]);
-
-  Posture_matrix T30=Posture_Matrix_Multiply(&T10,&T31);
-
-  Posture_matrix T03=Posture_Matrix_Tr(&T30);
-
-  Posture_matrix T63=Posture_Matrix_Multiply(&T03,&T60);
-
-  //caculate X'Z'X' back
-  ref_joint.q[3] = atan2(T63.a31,T63.a21);
-  ref_joint.q[5] = atan2(T63.a13,-T63.a12);
-  ref_joint.q[4] = atan2(T63.a21,T63.a11*cos(ref_joint.q[3]));
 }
 
 #define ANGLE_INCREMENT 0.1
