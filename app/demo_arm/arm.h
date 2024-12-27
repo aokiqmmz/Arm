@@ -30,18 +30,20 @@ class Arm {
 public:
     Motor &m1, &m2, &m3, &m4, &m5, &m6;
     Joint arm_joint;
-    Pose ref_pose;
-    float l1=30, l2=30, l3=30;
-    uint16_t can_id[6];
+    //Pose ref_pose;
+    float l1=5, l2=40, l3=30;
+    float offset3 = 3.1415926/2;
+    float offset4 = -3.1415926/2;
+    float offset5 = 71.8945312/180 * 3.1415926;
 
     Arm(Motor &m1, Motor &m2, Motor &m3, Motor &m4, Motor &m5, Motor &m6 )
         : m1(m1), m2(m2), m3(m3), m4(m4), m5(m5), m6(m6) {
     }
-    void updateRefPose();
+    void updateRefPose(Pose &ref_pose);
     void rc_to_theta();
     void get_joint();
     void handle();
-    void ikine(Pose &ref_pose, Joint &ref_joint);
+    void ikine(Pose &ref_pose, Pose &rc_pose, Joint &ref_joint);
     void interpolate();
 };
 
