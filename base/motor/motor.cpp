@@ -182,7 +182,12 @@ void Motor::handle(void) {
   intensity_float_ = math::limit(intensity_float_ * math::sign(ratio_),
                                  -info_.max_intensity, info_.max_intensity);
   // 输出限幅
-  intensity_ = intensity_float_;
+  if(motor_data_.temp > 100.) {
+    intensity_ = 0.0;
+  }
+  else {
+    intensity_ = intensity_float_;
+  }
 }
 
 // Configure CAN id
